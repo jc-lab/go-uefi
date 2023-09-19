@@ -26,9 +26,9 @@ import (
 	"github.com/0x5a17ed/itkit"
 	"golang.org/x/sys/windows"
 
-	"github.com/0x5a17ed/uefi/efi/efiguid"
-	"github.com/0x5a17ed/uefi/efi/efireader"
-	"github.com/0x5a17ed/uefi/efi/efivario/efiwindows"
+	"github.com/jc-lab/go-uefi/efi/efiguid"
+	"github.com/jc-lab/go-uefi/efi/efireader"
+	"github.com/jc-lab/go-uefi/efi/efivario/efiwindows"
 )
 
 type bufferVarEntry struct {

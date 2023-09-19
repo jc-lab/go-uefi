@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/0x5a17ed/uefi/efi/efireader"
-	"github.com/0x5a17ed/uefi/efi/efitypes/efidevicepath"
+	"github.com/jc-lab/go-uefi/efi/efireader"
+	"github.com/jc-lab/go-uefi/efi/efitypes/efidevicepath"
 )
 
 // Attributes describes options for a LoadOption.

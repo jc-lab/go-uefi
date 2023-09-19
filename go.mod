@@ -1,4 +1,4 @@
-module github.com/0x5a17ed/uefi
+module github.com/jc-lab/go-uefi
 
 go 1.18
 

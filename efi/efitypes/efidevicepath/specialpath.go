@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/0x5a17ed/uefi/efi/efihex"
+	"github.com/jc-lab/go-uefi/efi/efihex"
 )
 
 // EndOfPath terminates a Device Path.

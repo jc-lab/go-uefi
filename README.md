@@ -10,7 +10,7 @@ This library tries its best to follow the UEFI 2.9 specification outlined [here]
 ## 📦 Installation
 
 ```console
-$ go get -u github.com/0x5a17ed/uefi@latest
+$ go get -u github.com/jc-lab/go-uefi@latest
 ```
 
 
@@ -22,8 +22,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/0x5a17ed/uefi/efi/efivario"
-	"github.com/0x5a17ed/uefi/efi/efivars"
+	"github.com/jc-lab/go-uefi/efi/efivario"
+	"github.com/jc-lab/go-uefi/efi/efivars"
 )
 
 func main() {
