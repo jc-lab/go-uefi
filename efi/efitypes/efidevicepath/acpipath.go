@@ -16,6 +16,7 @@ package efidevicepath
 
 import (
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 
 	"github.com/jc-lab/go-uefi/efi/efireader"
@@ -51,12 +52,23 @@ func (p *ACPIPath) GetHead() *Head {
 	return &p.Head
 }
 
+func (p *ACPIPath) UpdateHead() *Head {
+	p.Head.Type = ACPIType
+	p.Head.SubType = ACPISubType
+	p.Head.Length = 4 + 8
+	return &p.Head
+}
+
 func (p *ACPIPath) Text() string {
 	return fmt.Sprintf("ACPI(%s,%d)", intToEISA(int(p.HID)), p.UID)
 }
 
 func (p *ACPIPath) ReadFrom(r io.Reader) (n int64, err error) {
 	return efireader.ReadFields(r, &p.HID, &p.UID)
+}
+
+func (p *ACPIPath) WriteTo(w io.Writer) (n int64, err error) {
+	return efiwriter.WriteFields(w, p.HID, p.UID)
 }
 
 func ParseACPIDevicePath(f io.Reader, h Head) (p DevicePath, err error) {

@@ -15,7 +15,9 @@
 package efitypes
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 
 	"github.com/jc-lab/go-uefi/efi/efireader"
@@ -120,6 +122,44 @@ func (lo *LoadOption) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	lo.OptionalData, err = io.ReadAll(fr)
+
+	return
+}
+
+func (lo *LoadOption) WriteTo(w io.Writer) (n int64, err error) {
+	fw := efiwriter.NewFieldWriter(w, &n)
+
+	var filePathBuf bytes.Buffer
+	_, err = lo.FilePathList.WriteTo(&filePathBuf)
+	if err != nil {
+		err = fmt.Errorf("FilePathList: %w", err)
+		return
+	}
+	if filePathBuf.Len() >= 0x10000 {
+		err = fmt.Errorf("FilePathList too long: %w", err)
+		return
+	}
+	lo.FilePathListLength = uint16(filePathBuf.Len())
+
+	if err = fw.WriteFields(lo.Attributes, lo.FilePathListLength); err != nil {
+		err = fmt.Errorf("LoadOption: %w", err)
+		return
+	}
+
+	if _, err = efiwriter.WriteUTF16NullBytes(fw, lo.Description); err != nil {
+		err = fmt.Errorf("LoadOption/Description: %w", err)
+		return
+	}
+
+	if _, err = fw.Write(filePathBuf.Bytes()); err != nil {
+		err = fmt.Errorf("FilePathList Buffer: %w", err)
+		return
+	}
+
+	if _, err = fw.Write(lo.OptionalData); err != nil {
+		err = fmt.Errorf("OptionalData: %w", err)
+		return
+	}
 
 	return
 }

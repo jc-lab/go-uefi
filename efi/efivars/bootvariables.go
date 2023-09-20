@@ -86,6 +86,7 @@ func Boot(i uint16) Variable[*efitypes.LoadOption] {
 	return Variable[*efitypes.LoadOption]{
 		name:      fmt.Sprintf("Boot%04X", i),
 		guid:      GlobalVariable,
+		marshal:   structMarshaller[*efitypes.LoadOption],
 		unmarshal: structUnmarshaller[efitypes.LoadOption],
 	}
 }

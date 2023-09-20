@@ -19,6 +19,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiguid"
+	"github.com/jc-lab/go-uefi/efi/efitypes/efidevicepath"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 	"testing"
 
@@ -111,6 +114,99 @@ func TestLoadOption_ReadFrom(t *testing.T) {
 			assert.Equal(tc.want.description, lopt.DescriptionString())
 			assert.Equal(tc.want.filePathStrings, lopt.FilePathList.AllText())
 			assert.Equal(tc.want.optionalData, lopt.OptionalData)
+		})
+	}
+}
+
+func TestLoadOption_WriteTo(t *testing.T) {
+	type args struct {
+		fileName string
+	}
+	type want struct {
+		n          int64
+		fix        func(buf []byte)
+		loadOption efitypes.LoadOption
+	}
+	tt := []struct {
+		name    string
+		args    args
+		want    want
+		wantErr assertPkg.ErrorAssertionFunc
+	}{
+		{"80", args{fileName: "LoadOption80-01.txt"}, want{
+			n: 53,
+			loadOption: efitypes.LoadOption{
+				Description: efiwriter.StringToUTF16Bytes("TestOption80-01"),
+				FilePathList: efidevicepath.DevicePaths{
+					&efidevicepath.UnrecognizedDevicePath{
+						Head: efidevicepath.Head{
+							Type: 128, SubType: 1, Length: 9,
+						},
+						Data: []byte{0x01, 0x23, 0x45, 0x67, 0x89},
+					},
+				},
+				OptionalData: []byte{0x0, 0x0},
+			},
+		}, assertPkg.NoError},
+		{"0404-0401", args{fileName: "LoadOption0404-0401.txt"}, want{
+			n: 106,
+			fix: func(buf []byte) {
+				buf[4] = 0x58
+			},
+			loadOption: efitypes.LoadOption{
+				Attributes:  1,
+				Description: efiwriter.StringToUTF16Bytes("Linux"),
+				FilePathList: efidevicepath.DevicePaths{
+					&efidevicepath.HardDriveMediaDevicePath{
+						PartitionNumber:    1,
+						PartitionStartLBA:  0x800,
+						PartitionSizeLBA:   0x32000,
+						PartitionSignature: efiguid.GUID{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+						PartitionFormat:    efidevicepath.GUIDPartitionFormat,
+						SignatureType:      efidevicepath.GUIDSignatureType,
+					},
+					&efidevicepath.FilePathDevicePath{
+						PathName: efiwriter.StringToUTF16Bytes("EFI\\LINUX\\GRUB.EFI"),
+					},
+				},
+				OptionalData: []byte{},
+			},
+		}, assertPkg.NoError},
+		{"05", args{fileName: "LoadOption05.txt"}, want{
+			n: 45,
+			loadOption: efitypes.LoadOption{
+				Description: efiwriter.StringToUTF16Bytes("TestOption01"),
+				FilePathList: efidevicepath.DevicePaths{
+					&efidevicepath.BIOSBootSpecPath{
+						DeviceType:  5,
+						Description: []byte{},
+						StatusFlag:  0,
+					},
+				},
+				OptionalData: []byte{},
+			},
+		}, assertPkg.NoError},
+	}
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assertPkg.New(t)
+
+			f := golden.Open(t, tc.args.fileName)
+			defer f.Close()
+
+			expected, err := readHexdump(f)
+			requirePkg.NoError(t, err)
+
+			if tc.want.fix != nil {
+				tc.want.fix(expected)
+			}
+
+			var buffer bytes.Buffer
+			n, err := tc.want.loadOption.WriteTo(&buffer)
+			requirePkg.NoError(t, err)
+			assert.Equal(tc.want.n, n)
+			assert.Equal(expected, buffer.Bytes())
 		})
 	}
 }

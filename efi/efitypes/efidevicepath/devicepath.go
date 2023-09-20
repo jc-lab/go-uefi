@@ -16,6 +16,7 @@ package efidevicepath
 
 import (
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 	"strings"
 
@@ -93,8 +94,10 @@ func (h *Head) Is(t DevicePathType, st DevicePathSubType) bool {
 
 type DevicePath interface {
 	io.ReaderFrom
+	io.WriterTo
 
 	GetHead() *Head
+	UpdateHead() *Head
 
 	// Text returns a text representation of a Device Path.
 	//
@@ -191,5 +194,31 @@ func (p *DevicePaths) ReadFrom(r io.Reader) (n int64, err error) {
 			}
 		}
 	}
+	return
+}
+
+func (p *DevicePaths) WriteTo(w io.Writer) (n int64, err error) {
+	fw := efiwriter.NewFieldWriter(w, &n)
+
+	var hasEndOfPath bool
+
+	for _, d := range *p {
+		head := d.UpdateHead()
+		if head.Type == EndOfPathType {
+			hasEndOfPath = true
+		}
+		err = fw.WriteFields(head)
+		if err == nil {
+			_, err = d.WriteTo(fw)
+		}
+		if err != nil {
+			return
+		}
+	}
+	if !hasEndOfPath {
+		var endOfPath EndOfPath
+		err = fw.WriteFields(endOfPath.UpdateHead())
+	}
+
 	return
 }

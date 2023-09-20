@@ -16,6 +16,7 @@ package efidevicepath
 
 import (
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 
 	"github.com/jc-lab/go-uefi/efi/efireader"
@@ -74,12 +75,23 @@ func (p *PCIDevicePath) GetHead() *Head {
 	return &p.Head
 }
 
+func (p *PCIDevicePath) UpdateHead() *Head {
+	p.Head.Type = HardwareType
+	p.Head.SubType = PCISubType
+	p.Head.Length = 4 + 2
+	return &p.Head
+}
+
 func (p *PCIDevicePath) Text() string {
 	return fmt.Sprintf("Pci(%d,%d)", p.Function, p.Device)
 }
 
 func (p *PCIDevicePath) ReadFrom(r io.Reader) (n int64, err error) {
 	return efireader.ReadFields(r, &p.Function, &p.Device)
+}
+
+func (p *PCIDevicePath) WriteTo(w io.Writer) (n int64, err error) {
+	return efiwriter.WriteFields(w, &p.Function, &p.Device)
 }
 
 func ParseHardwareDevicePath(f io.Reader, h Head) (p DevicePath, err error) {

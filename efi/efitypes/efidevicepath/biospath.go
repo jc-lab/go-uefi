@@ -16,6 +16,7 @@ package efidevicepath
 
 import (
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 
 	"github.com/jc-lab/go-uefi/efi/efireader"
@@ -50,6 +51,13 @@ func (p *BIOSBootSpecPath) GetHead() *Head {
 	return &p.Head
 }
 
+func (p *BIOSBootSpecPath) UpdateHead() *Head {
+	p.Head.Type = BIOSBootType
+	p.Head.SubType = BIOSBootSpecSubType
+	p.Head.Length = uint16(4 + 4 + efiwriter.LengthASCIINullBytes(p.Description))
+	return &p.Head
+}
+
 func (p *BIOSBootSpecPath) Text() string {
 	return fmt.Sprintf(
 		"BBS(%d,%s,%x)",
@@ -68,6 +76,20 @@ func (p *BIOSBootSpecPath) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	p.Description, err = efireader.ReadASCIINullBytes(fr)
+
+	return
+}
+
+func (p *BIOSBootSpecPath) WriteTo(w io.Writer) (n int64, err error) {
+	fw := efiwriter.NewFieldWriter(w, &n)
+
+	if err = fw.WriteFields(&p.DeviceType, &p.StatusFlag); err != nil {
+		return
+	}
+
+	if _, err = efiwriter.WriteASCIINullBytes(fw, p.Description); err != nil {
+		return
+	}
 
 	return
 }

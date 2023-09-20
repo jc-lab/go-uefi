@@ -16,6 +16,7 @@ package efidevicepath
 
 import (
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 
 	"github.com/jc-lab/go-uefi/efi/efihex"
@@ -25,8 +26,15 @@ import (
 type EndOfPath struct{ Head }
 
 func (p *EndOfPath) ReadFrom(r io.Reader) (n int64, err error) { return 0, nil }
+func (p *EndOfPath) WriteTo(w io.Writer) (n int64, err error)  { return 0, nil }
 func (p *EndOfPath) GetHead() *Head                            { return &p.Head }
-func (p *EndOfPath) Text() string                              { return "" }
+func (p *EndOfPath) UpdateHead() *Head {
+	p.Head.Type = EndOfPathType
+	p.Head.SubType = EndEntireSubType
+	p.Head.Length = 4
+	return &p.Head
+}
+func (p *EndOfPath) Text() string { return "" }
 
 const (
 	_ DevicePathSubType = iota
@@ -52,7 +60,16 @@ func (p *UnrecognizedDevicePath) ReadFrom(r io.Reader) (n int64, err error) {
 	return
 }
 
+func (p *UnrecognizedDevicePath) WriteTo(w io.Writer) (n int64, err error) {
+	return efiwriter.WriteFields(w, p.Data)
+}
+
 func (p *UnrecognizedDevicePath) GetHead() *Head {
+	return &p.Head
+}
+
+func (p *UnrecognizedDevicePath) UpdateHead() *Head {
+	p.Length = uint16(4 + len(p.Data))
 	return &p.Head
 }
 

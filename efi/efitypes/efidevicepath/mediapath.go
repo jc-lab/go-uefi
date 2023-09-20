@@ -17,6 +17,7 @@ package efidevicepath
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
 
 	"github.com/jc-lab/go-uefi/efi/efiguid"
@@ -100,6 +101,13 @@ func (p *HardDriveMediaDevicePath) GetHead() *Head {
 	return &p.Head
 }
 
+func (p *HardDriveMediaDevicePath) UpdateHead() *Head {
+	p.Head.Type = MediaType
+	p.Head.SubType = HardDriveSubType
+	p.Head.Length = 4 + 38
+	return &p.Head
+}
+
 func (p *HardDriveMediaDevicePath) Text() string {
 	var t, sig, r string
 
@@ -122,6 +130,18 @@ func (p *HardDriveMediaDevicePath) Text() string {
 func (p *HardDriveMediaDevicePath) ReadFrom(r io.Reader) (n int64, err error) {
 	return efireader.ReadFields(
 		r,
+		&p.PartitionNumber,
+		&p.PartitionStartLBA,
+		&p.PartitionSizeLBA,
+		&p.PartitionSignature,
+		&p.PartitionFormat,
+		&p.SignatureType,
+	)
+}
+
+func (p *HardDriveMediaDevicePath) WriteTo(w io.Writer) (n int64, err error) {
+	return efiwriter.WriteFields(
+		w,
 		&p.PartitionNumber,
 		&p.PartitionStartLBA,
 		&p.PartitionSizeLBA,
@@ -155,7 +175,18 @@ func (p *CDROMDevicePath) ReadFrom(r io.Reader) (n int64, err error) {
 	return efireader.ReadFields(r, &p.BootEntry, &p.PartitionStartRBA, &p.PartitionSize)
 }
 
+func (p *CDROMDevicePath) WriteTo(w io.Writer) (n int64, err error) {
+	return efiwriter.WriteFields(w, &p.BootEntry, &p.PartitionStartRBA, &p.PartitionSize)
+}
+
 func (p *CDROMDevicePath) GetHead() *Head {
+	return &p.Head
+}
+
+func (p *CDROMDevicePath) UpdateHead() *Head {
+	p.Head.Type = MediaType
+	p.Head.SubType = CDROMSubType
+	p.Head.Length = 4 + 20
 	return &p.Head
 }
 
@@ -185,6 +216,13 @@ func (p *VendorMediaDevicePath) GetHead() *Head {
 	return &p.Head
 }
 
+func (p *VendorMediaDevicePath) UpdateHead() *Head {
+	p.Head.Type = MediaType
+	p.Head.SubType = VendorMediaSubType
+	p.Head.Length = uint16(4 + 16 + len(p.VendorDefinedData))
+	return &p.Head
+}
+
 func (p *VendorMediaDevicePath) ReadFrom(r io.Reader) (n int64, err error) {
 	fr := efireader.NewFieldReader(r, &n)
 
@@ -196,10 +234,22 @@ func (p *VendorMediaDevicePath) ReadFrom(r io.Reader) (n int64, err error) {
 	return
 }
 
+func (p *VendorMediaDevicePath) WriteTo(w io.Writer) (n int64, err error) {
+	fw := efiwriter.NewFieldWriter(w, &n)
+
+	if err = fw.WriteFields(&p.VendorGUID); err != nil {
+		return
+	}
+	_, err = fw.Write(p.VendorDefinedData)
+
+	return
+}
+
 // FilePathDevicePath describes a file path node.
 type FilePathDevicePath struct {
 	Head
 
+	// PathName UTF-16 bytes
 	PathName []byte
 }
 
@@ -211,9 +261,24 @@ func (p *FilePathDevicePath) GetHead() *Head {
 	return &p.Head
 }
 
+func (p *FilePathDevicePath) UpdateHead() *Head {
+	p.Head.Type = MediaType
+	p.Head.SubType = FilePathSubType
+	p.Head.Length = uint16(4 + efiwriter.LengthUTF16NullBytes(p.PathName))
+	return &p.Head
+}
+
 func (p *FilePathDevicePath) ReadFrom(r io.Reader) (n int64, err error) {
 	wrapper := efireader.NewFieldReader(r, &n)
 	p.PathName, err = efireader.ReadUTF16NullBytes(wrapper)
+	return
+}
+
+func (p *FilePathDevicePath) WriteTo(w io.Writer) (n int64, err error) {
+	fw := efiwriter.NewFieldWriter(w, &n)
+
+	_, err = efiwriter.WriteUTF16NullBytes(fw, p.PathName)
+
 	return
 }
 
