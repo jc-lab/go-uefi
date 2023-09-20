@@ -16,8 +16,10 @@ package efidevicepath
 
 import (
 	"fmt"
+	"github.com/jc-lab/go-uefi/efi/efireader"
 	"github.com/jc-lab/go-uefi/efi/efiwriter"
 	"io"
+	"strings"
 
 	"github.com/jc-lab/go-uefi/efi/efihex"
 )
@@ -74,6 +76,25 @@ func (p *UnrecognizedDevicePath) UpdateHead() *Head {
 }
 
 func (p *UnrecognizedDevicePath) Text() string {
+	if p.Head.Is(MessagingType, 11) {
+		var ifType byte
+		if len(p.Data) >= (36 - 4) {
+			ifType = p.Data[36-4]
+		}
+		return fmt.Sprintf(
+			"MAC(%s,%v)",
+			strings.Trim(efihex.EncodeToString(p.Data), "0"),
+			ifType,
+		)
+	}
+
+	if p.Head.Is(MessagingType, 24) {
+		return fmt.Sprintf(
+			"Uri(%s)",
+			efireader.ASCIIZBytesToString(p.Data),
+		)
+	}
+
 	return fmt.Sprintf(
 		"Path(%d,%d,%s)",
 		p.Head.Type,
